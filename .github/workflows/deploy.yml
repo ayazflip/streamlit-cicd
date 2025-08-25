@@ -26,7 +26,9 @@ jobs:
       - name: Deploy to EC2
         run: |
           ssh -i ~/.ssh/streamlit-cicd ubuntu@${{ secrets.EC2_HOST }} << 'EOF'
-            cd /home/ubuntu/streamlit-app || git clone https://github.com/AyazAI/streamlit-cicd.git streamlit-app
+            sudo apt update
+            sudo apt install -y python3-pip python3-venv git
+            cd /home/ubuntu/streamlit-app || git clone git@github.com:ayazflip/streamlit-cicd.git streamlit-app
             cd streamlit-app
             git pull origin master
             python3 -m venv venv
