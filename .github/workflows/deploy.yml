@@ -13,28 +13,39 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v3
 
-      - name: Setup GitHub SSH
+      - name: Setup SSH
         run: |
           mkdir -p ~/.ssh
-          echo "${{ secrets.GH_DEPLOY_KEY }}" > ~/.ssh/github_key
-          chmod 600 ~/.ssh/github_key
+          echo "${{ secrets.EC2_SSH_KEY }}" | tr -d '\r' > ~/.ssh/streamlit-cicd
+          chmod 600 ~/.ssh/streamlit-cicd
           ssh-keyscan github.com >> ~/.ssh/known_hosts
-          export GIT_SSH_COMMAND="ssh -i ~/.ssh/github_key"
+          ssh-keyscan ${{ secrets.EC2_HOST }} >> ~/.ssh/known_hosts
 
-      - name: Debug SSH connection
-        run: ssh -i ~/.ssh/streamlit-cicd -T ubuntu@${{ secrets.EC2_HOST }}
+      - name: Test SSH connection
+        run: ssh -i ~/.ssh/streamlit-cicd -o StrictHostKeyChecking=no ubuntu@${{ secrets.EC2_HOST }} "echo ✅ Connected to EC2"
 
       - name: Deploy to EC2
         run: |
-          ssh -i ~/.ssh/streamlit-cicd ubuntu@${{ secrets.EC2_HOST }} << 'EOF'
+          ssh -i ~/.ssh/streamlit-cicd -o StrictHostKeyChecking=no ubuntu@${{ secrets.EC2_HOST }} << 'EOF'
+            set -e
             sudo apt update
             sudo apt install -y python3-pip python3-venv git
-            cd /home/ubuntu/streamlit-app || git clone git@github.com:ayazflip/streamlit-cicd.git streamlit-app
-            cd streamlit-app
+
+            # clone repo if not exists
+            if [ ! -d "/home/ubuntu/streamlit-app" ]; then
+              git clone git@github.com:ayazflip/streamlit-cicd.git /home/ubuntu/streamlit-app
+            fi
+
+            cd /home/ubuntu/streamlit-app
             git pull origin master
+
+            # setup venv
             python3 -m venv venv
             source venv/bin/activate
+            pip install --upgrade pip
             pip install -r requirements.txt
+
+            # restart streamlit
             pkill -f "streamlit run app.py" || true
             nohup streamlit run app.py --server.port 8501 --server.address 0.0.0.0 > app.log 2>&1 &
           EOF
