@@ -13,12 +13,13 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v3
 
-      - name: Setup SSH
+      - name: Setup GitHub SSH
         run: |
           mkdir -p ~/.ssh
-          echo "${{ secrets.EC2_SSH_KEY }}" > ~/.ssh/streamlit-cicd
-          chmod 600 ~/.ssh/streamlit-cicd
-          ssh-keyscan -H ${{ secrets.EC2_HOST }} >> ~/.ssh/known_hosts
+          echo "${{ secrets.GH_DEPLOY_KEY }}" > ~/.ssh/github_key
+          chmod 600 ~/.ssh/github_key
+          ssh-keyscan github.com >> ~/.ssh/known_hosts
+          export GIT_SSH_COMMAND="ssh -i ~/.ssh/github_key"
 
       - name: Debug SSH connection
         run: ssh -i ~/.ssh/streamlit-cicd -T ubuntu@${{ secrets.EC2_HOST }}

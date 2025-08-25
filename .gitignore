@@ -8,5 +8,5 @@ eval "$(ssh-agent -s)"
 ssh-add ~/.ssh/id_rsa_uiit3
 ssh-add ~/.ssh/id_rsa_flip
 
-
-git remote add flip git@flip:ayazflip/streamlit-cicd.git
+github_actions_key
+github_actions_key.pub
