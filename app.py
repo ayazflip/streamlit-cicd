@@ -2,7 +2,7 @@ import streamlit as st
 
 st.set_page_config(page_title="Simple Streamlit App", page_icon="👋")
 
-st.title("Welcome to My Simple Streamlit App!")
+st.title("Welcome to My Simple Streamlit App with CI CD!")
 
 st.write("This is a basic Streamlit application created by Cline.")
 st.write("You can expand this app with more interactive elements, data visualizations, and machine learning models.")
