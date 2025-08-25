@@ -1,41 +1,51 @@
-name: Deploy Streamlit to EC2
+name: Deploy Streamlit App to EC2
 
 on:
   push:
     branches:
-      - master
+      - master # your repo's default branch
 
 jobs:
   deploy:
     runs-on: ubuntu-latest
 
     steps:
-      - name: Checkout repository
-        uses: actions/checkout@v3
-
-      - name: Setup SSH
-        run: |
-          mkdir -p ~/.ssh
-          echo "${{ secrets.EC2_SSH_KEY }}" | tr -d '\r' > ~/.ssh/streamlit-cicd
-          chmod 600 ~/.ssh/streamlit-cicd
-          ssh-keyscan github.com >> ~/.ssh/known_hosts
-          ssh-keyscan ${{ secrets.EC2_HOST }} >> ~/.ssh/known_hosts
-
-      - name: Test SSH connection
-        run: ssh -i ~/.ssh/streamlit-cicd -o StrictHostKeyChecking=no ubuntu@${{ secrets.EC2_HOST }} "echo ✅ Connected to EC2"
+      - name: Checkout repo
+        uses: actions/checkout@v4
 
       - name: Deploy to EC2
+        env:
+          EC2_HOST: ${{ secrets.EC2_HOST }}
+          EC2_USER: ubuntu
         run: |
-          ssh -i ~/.ssh/streamlit-cicd -o StrictHostKeyChecking=no ubuntu@${{ secrets.EC2_HOST }} << 'EOF'
+          ssh -i ~/.ssh/streamlit-cicd -o StrictHostKeyChecking=no $EC2_USER@$EC2_HOST << 'EOF'
+            set -e
             cd /home/ubuntu
+
             if [ ! -d "streamlit-app" ]; then
+              echo "Cloning repo first time..."
               git clone git@github.com:ayazflip/streamlit-cicd.git streamlit-app
             else
-              cd streamlit-app && git fetch origin && git reset --hard origin/main
+              echo "Pulling latest changes..."
+              cd streamlit-app
+              git fetch origin
+              git reset --hard origin/master   # <-- fixed to master
             fi
+
             cd /home/ubuntu/streamlit-app
-            python3 -m venv venv
+
+            # Setup venv if not exists
+            if [ ! -d "venv" ]; then
+              python3 -m venv venv
+            fi
+
             source venv/bin/activate
+            pip install --upgrade pip
             pip install -r requirements.txt
+
+            # Kill old Streamlit if running
+            pkill -f "streamlit run" || true
+
+            # Restart Streamlit
             nohup streamlit run app.py --server.port 8501 --server.address 0.0.0.0 >/dev/null 2>&1 &
           EOF
