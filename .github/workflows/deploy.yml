@@ -1,0 +1,37 @@
+name: Deploy Streamlit to EC2
+
+on:
+  push:
+    branches:
+      - master
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v3
+
+      - name: Setup SSH
+        run: |
+          mkdir -p ~/.ssh
+          echo "${{ secrets.EC2_SSH_KEY }}" > ~/.ssh/streamlit-cicd
+          chmod 600 ~/.ssh/streamlit-cicd
+          ssh-keyscan -H ${{ secrets.EC2_HOST }} >> ~/.ssh/known_hosts
+
+      - name: Debug SSH connection
+        run: ssh -i ~/.ssh/streamlit-cicd -T ubuntu@${{ secrets.EC2_HOST }}
+
+      - name: Deploy to EC2
+        run: |
+          ssh -i ~/.ssh/streamlit-cicd ubuntu@${{ secrets.EC2_HOST }} << 'EOF'
+            cd /home/ubuntu/streamlit-app || git clone https://github.com/AyazAI/streamlit-cicd.git streamlit-app
+            cd streamlit-app
+            git pull origin master
+            python3 -m venv venv
+            source venv/bin/activate
+            pip install -r requirements.txt
+            pkill -f "streamlit run app.py" || true
+            nohup streamlit run app.py --server.port 8501 --server.address 0.0.0.0 > app.log 2>&1 &
+          EOF
