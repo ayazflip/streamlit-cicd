@@ -16,7 +16,7 @@ jobs:
       - name: Setup SSH
         run: |
           mkdir -p ~/.ssh
-          echo "${{ secrets.GH_KEY }}" > ~/.ssh/streamlit-cicd
+          echo "${{ secrets.GH_DEPLOY_KEY }}" > ~/.ssh/streamlit-cicd
           chmod 600 ~/.ssh/streamlit-cicd
           ssh-keyscan -H $EC2_HOST >> ~/.ssh/known_hosts
 
