@@ -27,25 +27,15 @@ jobs:
       - name: Deploy to EC2
         run: |
           ssh -i ~/.ssh/streamlit-cicd -o StrictHostKeyChecking=no ubuntu@${{ secrets.EC2_HOST }} << 'EOF'
-            set -e
-            sudo apt update
-            sudo apt install -y python3-pip python3-venv git
-
-            # clone repo if not exists
-            if [ ! -d "/home/ubuntu/streamlit-app" ]; then
-              git clone git@github.com:ayazflip/streamlit-cicd.git /home/ubuntu/streamlit-app
+            cd /home/ubuntu
+            if [ ! -d "streamlit-app" ]; then
+              git clone git@github.com:ayazflip/streamlit-cicd.git streamlit-app
+            else
+              cd streamlit-app && git fetch origin && git reset --hard origin/main
             fi
-
             cd /home/ubuntu/streamlit-app
-            git pull origin master
-
-            # setup venv
             python3 -m venv venv
             source venv/bin/activate
-            pip install --upgrade pip
             pip install -r requirements.txt
-
-            # restart streamlit
-            pkill -f "streamlit run app.py" || true
-            nohup streamlit run app.py --server.port 8501 --server.address 0.0.0.0 > app.log 2>&1 &
+            nohup streamlit run app.py --server.port 8501 --server.address 0.0.0.0 >/dev/null 2>&1 &
           EOF
